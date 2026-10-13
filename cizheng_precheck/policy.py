@@ -2,7 +2,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-VERSION = "review-priority-1.0"
+VERSION = "review-priority-1.1"
 LABELS = {1: "常规核验", 2: "常规核验", 3: "重点复核", 4: "优先送检", 5: "优先送检"}
 
 
@@ -39,16 +39,37 @@ def catalog_report(case, job, refs, origins):
         return report
     ref = next(r for r in refs if r["id"] in ids)
     repaired = "repair" in ref["medium"].lower()
-    report.update(opinion="馆方记录有修补，建议复核" if repaired else "照片出处已核对，真伪待核",
-                  advice="优先核对口沿修补记录及实物状态。" if repaired else "资料归属已列明，实物身份仍须专业核验。",
-                  score=rating(3 if repaired else None, "同一照片对应的馆方原始记录明确记载修补" if repaired else "来源核查不等于真伪筛查，暂不评分"),
-                  next_step="携带原图和本页咨询专业机构；补充底足、款识及疑点位置的带尺度微距。")
-    pids = [p["id"] for p in case["photos"]]
-    report["reasons"] = [
-        {"title": "原图出处可追溯", "body": f"本组照片的文件或解码像素匹配 The Met 的公开图像。馆藏号 {ref['accession']}；匹配仅确认图片来源。", "photo_ids": pids, "reference_ids": [ref["id"]]},
-        {"title": "馆方记录明确记载修补" if repaired else "馆方归属仅适用于参考器", "body": ("材质栏原文包含 gold lacquer repairs（金漆修补）。修补本身不能证明整件为仿品，应核对修复档案。" if repaired else f"馆方年代记录为 {ref['date']}。这是对馆藏对象的描述，不能转用于外观相似的另一件器物。"), "photo_ids": pids[:2], "reference_ids": [ref["id"]]},
-        {"title": "实物身份及细节仍需核验", "body": "本轮核验了图片及文献，尚无现场采集或材料检测；微观老化、修补年代及真伪不能据此确定。", "photo_ids": pids, "reference_ids": []},
+    # These source-audit grades concern what to verify next, not physical authenticity.
+    period = ref.get('period') or ref.get('date') or '馆方原始记录'
+    profile = case.get('example', {})
+    from .examples import EXAMPLES
+    example = EXAMPLES.get(profile.get('object_id'), {})
+    conflict = (profile.get('scenario')=='claim_conflict' and case.get('claim')==example.get('claim')
+                and ref['id']=='MET-51185' and '19th century' in ref['excerpt'] and 'Qing dynasty' in ref['excerpt'])
+    pids = [p['id'] for p in case['photos']]
+    opinion, advice, value = '资料归属可查，常规核验', '本轮资料未形成明确矛盾，下一步核对器物来源和实物状态。', 2
+    trigger='全部照片精确匹配同一馆方记录，归属资料可查；未进行实物鉴真'
+    title, body = '馆方归属记录可核对', f'馆方记载：{period}。本轮未发现资料内部冲突；该归属只适用于记录中的馆藏对象。'
+    next_step='保留照片、购藏凭证和本页，常规核对实物来源及状况。'
+    if repaired:
+        opinion, advice, value = '馆方记录有修补，建议复核', '优先核对口沿修补记录及实物状态。', 3
+        trigger='同一照片对应的馆方原始记录明确记载修补'
+        title, body = '馆方记录明确记载修补', '材质栏原文包含 gold lacquer repairs（金漆修补）。修补本身不能证明整件为仿品，应核对修复档案。'
+        next_step='咨询修复或鉴定专业人员，重点核对口沿修补范围、稳定性和既往修复记录。'
+    elif conflict:
+        opinion, advice, value = '年代说法冲突，优先复核', '待核验说法为明代，馆方记录为清代19世纪，应先纠正年代信息。', 4
+        trigger='体验设定的明代说法，同精确匹配照片的馆方清代19世纪记录直接冲突'
+        title, body = '明代说法不符合馆方记录', '待核验的“明代”是体验设定。馆方原文为 Qing dynasty (1644–1911) 和 19th century；冲突针对年代说法，不表示馆藏器物是赝品。'
+        next_step='先要求提供年代归属依据，修正错误描述后再讨论送检或交易。'
+    report.update(opinion=opinion, advice=advice, score=rating(value,trigger), next_step=next_step)
+    report['reasons']=[
+        dict(title='原图出处可追溯',body=f'本组照片精确匹配 The Met 公开图像，馆藏号 {ref["accession"]}。匹配证明图片来源，不证明另一件实物身份。',photo_ids=pids,reference_ids=[ref['id']]),
+        dict(title=title,body=body,photo_ids=pids[:2],reference_ids=[ref['id']]),
+        dict(title='本轮意见的适用范围',body='本轮依据原始馆藏记录形成送检关注等级。未执行模型看图；照片外观、材料成分及实物身份仍需分别核验。',photo_ids=pids,reference_ids=[]),
     ]
+    if profile:
+        report['example_premise']=profile.get('premise','')
+
     return report
 
 

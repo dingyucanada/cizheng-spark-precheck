@@ -43,7 +43,7 @@ class ObservationSet(StrictModel):
     ceramic: Literal["yes", "uncertain", "no"]
     observations: list[Observation] = Field(min_length=1, max_length=12)
     # Controlled vocabulary; no owner name, filename, collector narrative or location goes online.
-    search_terms: list[Literal["ceramics", "porcelain", "stoneware", "bowl", "vase", "jar", "dish", "celadon", "Longquan", "blue and white", "Jingdezhen", "Chinese"]] = Field(max_length=5)
+    search_terms: list[Literal["ceramics", "porcelain", "stoneware", "bowl", "vase", "jar", "dish", "beaker", "teapot", "celadon", "Longquan", "blue and white", "Jingdezhen", "Chinese"]] = Field(max_length=5)
     missing_views: list[str] = Field(max_length=5)
 
 
@@ -92,4 +92,5 @@ class DemoInput(StrictModel):
 
 
 class StartInput(StrictModel):
+    force_new: bool = False
     mode: Literal["analyze", "catalog"] = "analyze"

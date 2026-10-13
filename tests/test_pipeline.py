@@ -98,3 +98,19 @@ def test_modified_original_stops_evidence_export(settings):
         path=settings.data_dir/'cases'/case['id']/'P1.original'
         path.write_bytes(path.read_bytes()+b'changed')
         assert c.get('/api/jobs/'+job['id']+'/evidence.zip').status_code==409
+
+
+def test_visual_mode_does_not_take_scenario_grade_or_catalog_cache(settings):
+    settings.model_url='http://127.0.0.1:8000/v1';settings.model='test-only'
+    with TestClient(create_app(settings,TestProvider)) as c:
+        c.headers['x-cz-csrf']=c.get('/api/status').json()['csrf']
+        case=c.post('/api/demos',json={'object_id':51185}).json()
+        catalog=c.post('/api/cases/'+case['id']+'/jobs',json={'mode':'catalog'}).json()
+        assert wait(c,catalog['id'])['status']=='complete'
+        assert c.get('/api/jobs/'+catalog['id']+'/report').json()['score']['value']==4
+        visual=c.post('/api/cases/'+case['id']+'/jobs',json={'mode':'analyze'}).json()
+        assert visual['id']!=catalog['id'] and wait(c,visual['id'])['status']=='complete'
+        report=c.get('/api/jobs/'+visual['id']+'/report').json()
+        # Protocol fixture reports a repair, so the rule yields 3, not scenario's 4.
+        assert report['mode']=='visual_precheck' and report['score']['value']==3
+        assert report['runtime']['model_calls'][0]['purpose']=='observe'

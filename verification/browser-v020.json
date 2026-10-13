@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "scenarios": [
+    {
+      "object_id": 48450,
+      "score": 3,
+      "opinion": "馆方记录有修补，建议复核",
+      "model_executed": false,
+      "case_id": "case_ca5ef4712b754892",
+      "job_id": "job_3007c5621b504f3d"
+    },
+    {
+      "object_id": 48607,
+      "score": 2,
+      "opinion": "资料归属可查，常规核验",
+      "model_executed": false,
+      "case_id": "case_596760b6153343ba",
+      "job_id": "job_0ac5baa193cd4715"
+    },
+    {
+      "object_id": 51185,
+      "score": 4,
+      "opinion": "年代说法冲突，优先复核",
+      "model_executed": false,
+      "case_id": "case_dc0c798ef2c54528",
+      "job_id": "job_27ef651b362045f4"
+    }
+  ],
+  "repeat_open_reuses_report": true,
+  "one_object_per_example": true,
+  "model_install_help": true,
+  "refresh_recovery": true,
+  "mobile_overflow": false,
+  "console_errors": [],
+  "visual_model_executed": false
+}

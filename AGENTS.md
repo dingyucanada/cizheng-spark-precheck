@@ -15,7 +15,7 @@ This repository is Cizheng (瓷证), a local ceramic photo precheck application.
 ## Deployment workflow
 
 1. Inventory this Spark (architecture, GPU, driver, free disk, Docker). Use scripts/doctor.py; never assume its environment matches another machine.
-2. Install application dependencies and CJK font. Start catalog mode and validate one-page PDF first.
+2. Prefer scripts/install-spark.sh --with-system-packages: this must install the actual local multimodal checkpoint and GPU service, not only the UI. Read START_HERE.md.
 3. Read official vLLM/NVIDIA documentation linked in the deployment guide, inspect container architecture and driver requirements. Confirm image digest after pull. The proposed model/container pair is a deployment starting point, not already validated on this device.
 4. Download the official checkpoint to models/ using download-model.py. It resolves a commit hash; retain the manifest. No automatic trust_remote_code.
 5. Start the local vision endpoint, inspect health and models, run probe-model.py with actual photo inputs. Fix startup/inference errors rather than hiding them.
@@ -26,3 +26,6 @@ This repository is Cizheng (瓷证), a local ceramic photo precheck application.
 ## Development
 
 `python -m pytest -q` from repo root. One service worker per data directory. No unbounded retry loops. Keep server-side secrets out of HTML and browser storage. The frontend is deliberately plain HTML/CSS/JS to avoid a separate build toolchain on Spark.
+
+- Preserve one object per exact photo set. Opening examples reuses objects and compatible reports; only explicit reruns create new report versions. Never delete legacy original files while merging duplicate listings.
+- Catalog scenarios have evidence-based 2/3/4 priorities. The Ming claim in the teapot scenario is an explicitly labeled exercise input. Do not call the museum artifact a forgery, or prescribe fixed scores for actual model runs.

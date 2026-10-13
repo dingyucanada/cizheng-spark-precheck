@@ -4,6 +4,7 @@
 <header class="topbar"><a class="brand" href="/"><span class="seal">瓷</span><strong>瓷证</strong><span class="brand-sub">一页预检</span></a><nav><button id="history-button" class="quiet">我的器物</button><span id="connection" class="connection">正在连接工作台</span></nav></header>
 <main>
 <section class="hero"><div class="eyebrow">每一份意见，都能回到照片和依据</div><h1>送检之前，<em>先把疑点看清楚。</em></h1><p>提交一组瓷器照片，整理可见特征、参考资料和复核重点。<br>得到一页简明报告，带着具体问题咨询专业机构。</p><div class="trust-strip"><span>原图保存在本机</span><span>判断理由可核对</span><span>一页 PDF 可留存</span></div></section>
+<section class="model-panel card"><div><span class="eyebrow">SPARK 本地推理</span><h2 id="model-title">正在检查多模态模型</h2><p id="model-detail">图像观察、资料比较、理由复核，都由本地模型执行。</p></div><div class="model-actions"><button id="refresh-model" class="secondary">检查连接</button><button id="setup-button" class="primary">安装本地模型</button></div></section>
 <section class="workspace">
 <aside class="intake card">
 <div class="section-title"><span class="step-number">01</span><h2>准备器物照片</h2></div>
@@ -15,13 +16,14 @@
 <label class="check"><input id="online" type="checkbox"><span>补充联网检索<small>只查询通用器物词，照片不上传到外部网站</small></span></label>
 <button type="submit" id="analyze" class="primary">生成一页预检报告 <span>↗</span></button></form>
 <p id="model-note" class="fine">照片辅助预检，供送检前参考。</p>
-<div class="demo-section"><div class="section-title"><h3>先体验一件公开馆藏</h3><span class="tag">真实照片</span></div><div id="demo-list"></div><p class="fine">体验执行照片出处核验和馆藏资料核查；不会模拟模型看图。</p></div>
+<div class="demo-section"><div class="section-title"><h3>三种预检情形</h3><span class="tag">真实照片</span></div><label class="field">案例运行方式<select id="demo-mode"><option value="analyze">Spark 本地模型分析</option><option value="catalog">资料核查体验（无需模型）</option></select></label><div id="demo-list"></div><p class="fine" id="demo-mode-note">本地分析读取同一组实物照片；资料体验按馆方记录形成意见。</p></div>
 </aside>
 <section class="result-area">
 <div class="result-top"><div><span class="eyebrow">PRECHECK / 预检工作台</span><h2 id="workspace-title">你的报告，从这里开始</h2></div><button id="clear-button" class="quiet">新建预检</button></div>
 <div id="progress" class="progress-card card" hidden><div class="progress-head"><strong id="stage">正在处理</strong><span id="percent">0%</span></div><div class="track"><i id="bar"></i></div><p id="progress-message"></p><ol id="events"></ol><button id="cancel" class="quiet">取消本次处理</button><button id="retry" class="secondary" hidden>用已保存的照片重试</button></div>
 <div id="empty" class="empty-preview"><div class="preview-watermark">瓷证</div><div class="empty-head"><span>瓷器 AI 辅助预鉴定报告</span><small>一件器物 · 一页意见</small></div><div class="empty-opinion"><span class="empty-line wide"></span><span class="empty-line short"></span><div class="ghost-score">—<small>/ 5</small></div></div><div class="empty-photo"><img src="/api/demo-photos/met-48450-01.jpg" alt="The Met 龙泉青釉修补碗公开实物照片"><div><strong>照片、意见、依据<br>放在同一页。</strong><p>从整体观察走向具体疑点<br>让下一次专业咨询更有方向</p></div></div><div class="empty-columns"><span>01 可见特征</span><span>02 判断理由</span><span>03 送检建议</span></div><p class="empty-source">图：The Met 17.57.1 · Public Domain / CC0</p></div>
 <div id="report-tools" class="report-tools" hidden><span id="mode-badge" class="tag"></span><div><a id="pdf-download" class="primary compact" href="#">下载一页 PDF</a><button id="evidence-button" class="secondary">查看证据</button></div></div>
+<div id="report-actions" class="report-actions" hidden><span id="case-context"></span><label class="version-control">报告版本<select id="report-version" aria-label="报告版本"></select></label><button id="rerun" class="secondary">用本地模型重新分析</button></div>
 <article id="report" class="paper" hidden></article>
 <section id="evidence" class="card evidence" hidden></section>
 <div class="method-note"><strong>看分数，更要看理由。</strong><span>2 常规核验 · 3 重点复核 · 4–5 优先送检。证据不足时暂不评分；评分表示送检关注程度。</span></div>
@@ -29,6 +31,7 @@
 <footer>瓷证 · 器物研究　状况记录　来源复核 <span>照片分析不替代专业机构实物鉴定</span></footer>
 </main>
 <dialog id="history-dialog"><div class="dialog-head"><h2>我的器物</h2><button id="close-history" class="quiet">关闭</button></div><div id="history-list"></div></dialog>
+<dialog id="setup-dialog"><div class="dialog-head"><h2>把模型装进你的 Spark</h2><button id="close-setup" class="quiet">关闭</button></div><p>解压安装包，在项目目录运行：</p><pre class="install-command">bash scripts/install-spark.sh --with-system-packages</pre><p>安装入口会下载 <b>Qwen3-VL-8B-Instruct</b> 多模态模型，启动 NVIDIA vLLM GPU 服务，执行真实照片探测，再启动工作台并生成验收报告。</p><p class="small muted">首次下载需要网络、Docker 使用权限及足够磁盘。模型和资料准备好后可以离线处理照片。其他 Spark 用户拿到同一安装包即可使用，无需你的云端账号或 API 密钥。</p><p>详细步骤见安装包中的 <b>START_HERE.md</b>。若模型已经在运行，请检查 .env 中的服务地址和模型名，再点击“检查连接”。</p></dialog>
 <dialog id="login-dialog"><h2>进入瓷证工作台</h2><p>请输入部署时设置的本机访问口令。</p><form id="login-form"><input id="token" type="password" autocomplete="current-password" required><button class="primary">进入工作台</button></form><p id="login-error"></p></dialog>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 <script src="/assets/app.js"></script></body></html>

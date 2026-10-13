@@ -10,7 +10,7 @@ import httpx
 
 MET_API = "https://collectionapi.metmuseum.org/public/collection"
 AIC_API = "https://api.artic.edu/api/v1/artworks/search"
-SEARCH_TERMS = {"ceramics", "porcelain", "stoneware", "bowl", "vase", "jar", "dish", "celadon", "Longquan", "blue and white", "Jingdezhen", "Chinese"}
+SEARCH_TERMS = {"ceramics", "porcelain", "stoneware", "bowl", "vase", "jar", "dish", "beaker", "teapot", "celadon", "Longquan", "blue and white", "Jingdezhen", "Chinese"}
 
 
 def tokens(value):
@@ -32,7 +32,7 @@ def normalize_met(raw):
         "excerpt": excerpt, "record_sha256": hashlib.sha256(json.dumps(raw, sort_keys=True).encode()).hexdigest(),
         "public_domain": bool(raw.get("isPublicDomain")), "medium": str(raw.get("medium", "")),
         "public_record": True,
-        "date": str(raw.get("objectDate", "")), "accession": str(raw.get("accessionNumber", "")),
+        "period": str(raw.get("period", "")), "date": str(raw.get("objectDate", "")), "accession": str(raw.get("accessionNumber", "")),
         "retrieved_at": datetime.now(timezone.utc).isoformat(),
         "image_url": raw.get("primaryImageSmall", "") if raw.get("isPublicDomain") else "",
     }

@@ -1,24 +1,28 @@
 # 本次交付验证记录
 
-验证日期：2026-10-14。应用版本：0.1.0。开发环境为 macOS / Python 3.12，GitHub Ubuntu / Python 3.12 自动检查亦通过；新实体 DGX Spark 尚未连接。本文件记录实际执行范围，目标设备记录由部署后追加。
+验证日期：2026-10-14。应用版本：0.2.0。开发环境为 macOS / Python 3.12；当前没有连接新实体 DGX Spark。本文件区分本机工程验证和目标设备 GPU 验收。
 
-## 已执行
+## 0.2.0 已执行
 
 | 检查 | 实际结果 | 可核查文件 |
 |---|---|---|
-| GitHub Linux 自动检查 | Ubuntu 上重新安装依赖、中文字体并通过测试和脚本检查 | [运行记录](https://github.com/dingyucanada/cizheng-spark-precheck/actions/runs/38447677134)、`github-linux-ci.json` |
-| 后台及规则回归 | 35 项通过；覆盖原图留存、来源匹配、引用、权限、拒绝评分、取消、超时和篡改拦截 | `pytest.txt`、`tests/` |
-| 桌面浏览器操作 | 实际点击馆藏入口，生成报告，下载PDF，展开证据，刷新恢复，打开历史 | `browser-check.json`、`docs/workbench.png`、`docs/report-workbench.png` |
-| 手机布局 | 390×844 视口，无横向溢出 | `mobile.png` |
-| 实际照片上传及错误恢复 | 上传两张照片，连接刻意不可用的本地模型地址；明确失败、保留照片、刷新后重试，无伪造报告 | `browser-failure-check.json` |
-| HTTP 完整验收 | 公开馆藏资料核查成功，PDF一页，文件哈希一致 | `catalog-acceptance.json`、`catalog-acceptance.pdf` |
-| PDF目视检查 | 中文可读、原图完整、意见和评分清晰，无越界或多页 | `catalog-report.pdf`、`docs/onepage.png` |
-| 馆藏在线检索 | 芝加哥艺术博物馆API返回3条龙泉窑相关记录；The Met本次返回403，系统保留降级状态 | `online-probe.json` |
-| 参考图来源 | 随包9张已核对的The Met原图；本次AIC图片接口403，未复制新图片 | `knowledge/photos.json`、`online-probe.json` |
-| GPU镜像架构 | 注册表清单包含linux/arm64，已保存实际摘要；未在GPU启动 | `vllm-manifest.json` |
-| 代码及脚本 | Python编译检查、Shell语法检查通过 | `scripts/`、GitHub自动检查 |
+| 后台及规则回归 | 47 项通过，涵盖原图留存、引用、评分、取消、超时、并发去重、旧数据迁移和模型路由 | `pytest-v020.txt`、`tests/` |
+| 三种资料核查场景 | 3分修补复核、2分常规核验、4分年代说法冲突；第三项明代说法明确标为体验设定 | `browser-v020.json`、`v020-48450.pdf`、`v020-48607.pdf`、`v020-51185.pdf` |
+| 真实浏览器重复点击 | 同一案例复用器物 ID 和报告 ID；我的器物只列一条，刷新后恢复报告 | `browser-v020.json` |
+| 历史数据迁移 | 已有重复档案归并显示，原图和旧报告仍可读取；并发提交也只创建一件 | `tests/test_objects.py` |
+| 模型模式隔离 | 测试替身验证：本地分析进入视觉调用链，不复用资料核查固定分数；失败不切换成静态报告 | `tests/test_pipeline.py` |
+| 模型健康检查 | 检查实际服务返回的模型名称；区分未配置、不可连接和名称不匹配 | `tests/test_deployment.py` |
+| 完整安装入口 | 包含权重下载、GPU服务、双图探测、后台启动和真实视觉验收；安装计划和Shell语法检查通过 | `scripts/install-spark.sh`、`tests/test_deployment.py` |
+| 三份 PDF 排版 | 均为一页，已逐份渲染目视检查；真实照片、意见、分数、理由及建议完整 | `docs/v020-48450.png`、`docs/v020-48607.png`、`docs/v020-51185.png` |
+| 桌面及手机 | 无浏览器控制台错误，390px视口无横向溢出 | `browser-v020.json`、`mobile.png`、`docs/workbench.png` |
 
-测试记录有一条 Starlette/httpx 测试客户端弃用提醒，不影响当前测试结果。调用视觉模型的单元/链路测试使用明确标识的测试替身，以验证协议、状态和错误处理；这些替身只存在于tests，生产应用不能选用。浏览器馆藏体验执行真实来源匹配及规则，不宣称模型看图。
+测试有一条 Starlette/httpx 测试客户端弃用提醒，不影响结果。视觉调用的自动测试使用仅存在于 tests 的替身，验证调用协议和规则，不代表真实模型观察效果。浏览器资料体验执行真实照片来源匹配及原文规则，不宣称已进行 GPU 推理。
+
+## 0.1.0 保留的基础验证
+
+上一版 Ubuntu / Python 3.12 的35项测试及脚本检查已通过，见 [GitHub运行记录](https://github.com/dingyucanada/cizheng-spark-precheck/actions/runs/38447677134) 和 `github-linux-ci.json`。这份旧记录不作为0.2.0的CI结果。
+
+保留 `browser-failure-check.json`（真实上传及失败恢复）、`catalog-acceptance.json`（HTTP完整验收）、`online-probe.json`（馆藏API结果）、`vllm-manifest.json`（镜像ARM64清单及摘要）。公开馆藏接口本次曾返回403，系统保留降级状态，不虚构检索成功。
 
 ## 新 Spark 上的真实验收
 

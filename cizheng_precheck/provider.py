@@ -23,6 +23,22 @@ class Provider:
         self.s = settings
         self.calls = []
 
+    async def health(self):
+        if not self.s.model_configured:
+            return dict(ready=False, state='not_configured', message='尚未安装或配置本地视觉模型', model=None)
+        try:
+            async with httpx.AsyncClient(timeout=4, follow_redirects=False, trust_env=False) as client:
+                response=await client.get(self.s.model_url.rstrip('/')+'/models',
+                    headers={'Authorization':'Bearer '+self.s.model_key} if self.s.model_key else {})
+                response.raise_for_status()
+                ids=[x.get('id') for x in response.json().get('data',[])]
+                if self.s.model not in ids:
+                    return dict(ready=False,state='model_mismatch',message='服务已连接，模型名称不匹配',model=self.s.model)
+                return dict(ready=True,state='ready',message='本地模型服务就绪',model=self.s.model,
+                            vision_verified=False)
+        except (httpx.HTTPError,ValueError,TypeError,AttributeError):
+            return dict(ready=False,state='unavailable',message='本地模型尚未启动或正在加载',model=self.s.model)
+
     async def complete(self, purpose, system, data, schema, images=(), cloud=False):
         s = self.s
         url, model, key = (s.text_url, s.text_model, s.text_key) if cloud else (s.model_url, s.model, s.model_key)

@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,73 @@ class Store:
         p = self.root / "cases" / case_id
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    @staticmethod
+    def photo_key(photos):
+        # Equality of photo sets, not a claim of physical-object identity.
+        pixels = sorted(p['pixel_sha256'] for p in photos)
+        return hashlib.sha256(json.dumps(pixels).encode()).hexdigest()
+
+    def canonical(self, identifier):
+        case = self.get(identifier, 'case')
+        seen = set()
+        while case.get('merged_into'):
+            if case['id'] in seen:
+                raise ValueError('case alias cycle')
+            seen.add(case['id'])
+            case = self.get(case['merged_into'], 'case')
+        return case
+
+    def reconcile_cases(self):
+        # Non-destructive migration: original folders/reports remain addressable.
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('CREATE TABLE IF NOT EXISTS case_index (fingerprint TEXT PRIMARY KEY, case_id TEXT NOT NULL)')
+            rows = db.execute("SELECT payload FROM records WHERE kind='case' ORDER BY created ASC,id ASC").fetchall()
+            for row in rows:
+                case=json.loads(row[0]); key=self.photo_key(case['photos'])
+                found=db.execute('SELECT case_id FROM case_index WHERE fingerprint=?',(key,)).fetchone()
+                if not found:
+                    db.execute('INSERT INTO case_index VALUES (?,?)',(key,case['id']))
+                elif found[0]!=case['id']:
+                    case['merged_into']=found[0]
+                    db.execute('UPDATE records SET payload=? WHERE id=?',(json.dumps(case,ensure_ascii=False),case['id']))
+
+    def save_case(self, meta, collected, demo=False, example=None):
+        key=self.photo_key([p for p,_,_ in collected])
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            found=db.execute('SELECT case_id FROM case_index WHERE fingerprint=?',(key,)).fetchone()
+            if found:
+                case=json.loads(db.execute('SELECT payload FROM records WHERE id=?',(found[0],)).fetchone()[0])
+                # Opening an example must not reset a collector's edited claim.
+                if not demo:
+                    roles={p['pixel_sha256']:p['role'] for p,_,_ in collected}
+                    for p in case['photos']: p['role']=roles[p['pixel_sha256']]
+                    case.update(meta.model_dump())
+                    case.pop('example',None)
+                elif not case.get('example') and case.get('demo') and not case.get('claim'):
+                    case.update(meta.model_dump(), example=example)
+                db.execute('UPDATE records SET payload=? WHERE id=?',(json.dumps(case,ensure_ascii=False),case['id']))
+                return case
+            case={'id':uid('case_'),'created_at':now(),**meta.model_dump(),'photos':[],'demo':demo}
+            if example: case['example']=example
+            folder=self.case_dir(case['id'])
+            for photo,data,preview in collected:
+                (folder/photo['original_file']).write_bytes(data)
+                (folder/photo['preview_file']).write_bytes(preview)
+                case['photos'].append(photo)
+            db.execute('INSERT INTO records VALUES (?,?,?,?)',(case['id'],'case',case['created_at'],json.dumps(case,ensure_ascii=False)))
+            db.execute('INSERT INTO case_index VALUES (?,?)',(key,case['id']))
+            return case
+
+    def cases(self):
+        return [c for c in self.listing('case',10000) if not c.get('merged_into')]
+
+    def jobs_for_case(self, case_id):
+        canonical=self.canonical(case_id)['id']
+        ids={c['id'] for c in self.listing('case',10000) if c['id']==canonical or c.get('merged_into')==canonical}
+        return [j for j in self.listing('job',10000) if j['case_id'] in ids]
 
     def recover(self):
         for job in self.listing("job", 10000):

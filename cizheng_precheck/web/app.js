@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let state = {status:null, files:[], roles:[], job:null, jobMode:"analyze", case:null, report:null, poll:null};
+let state = {status:null, health:null, files:[], roles:[], job:null, jobMode:"analyze", case:null, report:null, poll:null};
 const roles = {unknown:'请选择视角',overall:'整体',base:'底足',mouth:'口沿 / 内壁',detail:'局部细节',mark:'款识'};
 let toastTimer;
 function toast(text){ $('toast').textContent=text; $('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,6000); }
@@ -16,12 +16,11 @@ async function api(path, opts={}){
 async function boot(){
   try{
     state.status=await api('/api/status');
-    $('connection').textContent=state.status.model_configured?'本地模型已配置':'本地资料工作台';
-    $('model-note').textContent=state.status.model_configured?'原图只交给本地视觉模型。评分始终附带依据。':'公开馆藏体验可直接使用；提交新照片研判前，请在 Spark 上连接视觉模型。';
+    await refreshModel(true);
     $('online').disabled=!state.status.online_enabled;
     $('online').closest('label').title=state.status.online_enabled?'':'部署时启用联网检索后可选择';
     const demos=await api('/api/demos');
-    $('demo-list').innerHTML=demos.map(d=>`<button class="demo" data-id="${d.object_id}"><img src="${esc(d.photo)}" alt="${esc(d.name)}"><span><strong>${esc(d.name)}</strong><small>${esc(d.description)}</small></span></button>`).join('');
+    $('demo-list').innerHTML=demos.map(d=>`<button class="demo" data-id="${d.object_id}"><img src="${esc(d.photo)}" alt="${esc(d.name)}"><span><strong>${esc(d.name)}</strong><small class="demo-theme">${esc(d.theme)}</small><small>${esc(d.description)}</small></span></button>`).join('');
     document.querySelectorAll('.demo').forEach(b=>b.addEventListener('click',()=>demo(Number(b.dataset.id))));
     const saved=localStorage.getItem('cz_last_job');
     if(saved){try{const j=await api('/api/jobs/'+saved);state.job=j.id;const c=await api('/api/cases/'+j.case_id);state.case=c.case;await observeJob(j);}catch{localStorage.removeItem('cz_last_job');}}
@@ -40,13 +39,15 @@ function renderUploads(){
   document.querySelectorAll('.upload-photo select').forEach(s=>s.onchange=()=>{state.roles[Number(s.dataset.i)]=s.value;});
 }
 async function demo(id){
+  const mode=$('demo-mode').value;
+  if(mode==='analyze'&&!state.health?.ready){toast('先启动 Spark 本地模型，或主动选择资料核查体验。');return;}
   setBusy(true);
-  try{state.case=await api('/api/demos',{method:'POST',body:{object_id:id}});await start('catalog');}
+  try{state.case=await api('/api/demos',{method:'POST',body:{object_id:id}});await start(mode);}
   catch(e){toast(e.message);setBusy(false);}
 }
-async function start(mode){
-  clearTimeout(state.poll);state.jobMode=mode;$('retry').hidden=true;state.report=null;$('report').hidden=true;$('evidence').hidden=true;$('report-tools').hidden=true;$('empty').hidden=true;
-  const j=await api(`/api/cases/${state.case.id}/jobs`,{method:'POST',body:{mode}});state.job=j.id;localStorage.setItem('cz_last_job',j.id);
+async function start(mode, forceNew=false){
+  clearTimeout(state.poll);state.jobMode=mode;$('retry').hidden=true;state.report=null;$('report').hidden=true;$('evidence').hidden=true;$('report-tools').hidden=true;$('report-actions').hidden=true;$('empty').hidden=true;
+  const j=await api(`/api/cases/${state.case.id}/jobs`,{method:'POST',body:{mode,force_new:forceNew}});state.job=j.id;localStorage.setItem('cz_last_job',j.id);
   $('workspace-title').textContent=state.case.name;$('progress').hidden=false;$('cancel').hidden=false;await observeJob(j);
 }
 async function observeJob(j){
@@ -56,14 +57,17 @@ async function observeJob(j){
   if(j.status==='complete'){
     state.report=await api(`/api/jobs/${j.id}/report`);$('progress').hidden=true;$('empty').hidden=true;setBusy(false);renderReport(state.report);return;
   }
-  $('progress').hidden=false;$('empty').hidden=true;$('report').hidden=true;$('report-tools').hidden=true;$('evidence').hidden=true;
+  $('progress').hidden=false;$('empty').hidden=true;$('report').hidden=true;$('report-tools').hidden=true;$('report-actions').hidden=true;$('evidence').hidden=true;
   if(['failed','cancelled','interrupted'].includes(j.status)){setBusy(false);$('cancel').hidden=true;$('retry').hidden=false;toast(j.message);return;}
   $('retry').hidden=true;$('cancel').hidden=false;setBusy(true);state.poll=setTimeout(async()=>{try{await observeJob(await api('/api/jobs/'+j.id));}catch(e){setBusy(false);toast(e.message);}},900);
 }
 function renderReport(r){
   const value=r.score.value;
   $('workspace-title').textContent=r.object_name;
-  $('report-tools').hidden=false;$('report').hidden=false;
+  $('report-tools').hidden=false;$('report').hidden=false;$('report-actions').hidden=false;
+  $('case-context').textContent=r.claim?'核验问题：'+r.claim:'同一器物归档，重新分析保留报告版本';
+  $('rerun').disabled=!state.health?.ready;
+  $('rerun').textContent=r.mode==='catalog_audit'?'用本地模型分析这些照片':'重新分析 · 新报告版本';
   $('mode-badge').textContent=r.mode==='catalog_audit'?'公开馆藏 · 资料核查':'本地视觉 · 辅助预检';
   $('pdf-download').href=`/api/jobs/${r.job_id}/report.pdf`;
   $('report').innerHTML=`<div class="paper-head"><span class="paper-brand">瓷证</span><span class="paper-id">${esc(r.report_id)}<br>${esc(r.generated_at.slice(0,10))}</span></div><h2>${esc(r.title)}</h2><div class="paper-name">${esc(r.object_name)}</div>
@@ -72,7 +76,18 @@ function renderReport(r){
   ${r.reasons.map((x,i)=>`<div class="reason"><span class="number">0${i+1}</span><div><strong>${esc(x.title)}</strong><p>${esc(x.body)}</p><span class="refs">${esc(x.photo_ids.join(' / '))}${x.reference_ids.length?' · '+esc(x.reference_ids.join(' / ')):''}</span></div></div>`).join('')}
   <div class="next-step"><b>下一步</b><span>${esc(r.next_step)}</span></div><div class="report-note">${esc(r.score.meaning)}<br>${esc(r.notice)}</div>`;
   renderEvidence(r);
+  loadVersions(r);
 }
+async function loadVersions(r){
+  try{
+    const data=await api('/api/cases/'+r.case_id);
+    if(state.report?.job_id!==r.job_id)return;
+    const jobs=data.jobs.filter(j=>j.status==='complete');
+    $('report-version').innerHTML=jobs.map((j,i)=>`<option value="${esc(j.id)}">${jobs.length-i} · ${j.mode==='analyze'?'模型分析':'资料核查'} · ${esc(j.created_at.slice(0,16).replace('T',' '))}</option>`).join('');
+    $('report-version').value=r.job_id;
+  }catch(e){toast(e.message);}
+}
+$('report-version').onchange=async()=>{try{const j=await api('/api/jobs/'+$('report-version').value);state.job=j.id;localStorage.setItem('cz_last_job',j.id);await observeJob(j);}catch(e){toast(e.message);}};
 function renderEvidence(r){
   const observations=r.audit.observations?.observations || [];
   const groups=new Set(r.references.map(x=>x.source_group));
@@ -90,14 +105,38 @@ $('dropzone').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();
 $('dropzone').addEventListener('drop',e=>selectedFiles([...e.dataTransfer.files]));
 $('case-form').onsubmit=async e=>{
   e.preventDefault();if(!state.files.length){toast('请先选择器物照片，或体验一件公开馆藏');return;}
-  if(!state.status.model_configured){toast('新照片需要本地视觉模型。当前可先体验下方公开馆藏。');return;}
+  if(!state.health?.ready){toast('请先安装并启动 Spark 本地多模态模型，再点击检查连接。');return;}
   setBusy(true);try{const form=new FormData();form.append('metadata',JSON.stringify({name:$('name').value||'待检瓷器',claim:$('claim').value,source:$('source').value,online:$('online').checked,roles:state.roles}));state.files.forEach(f=>form.append('photos',f));state.case=await api('/api/cases',{method:'POST',body:form});await start('analyze');}catch(e){toast(e.message);setBusy(false);}
 };
 $('retry').onclick=async()=>{setBusy(true);try{await start(state.jobMode);}catch(e){setBusy(false);toast(e.message);}};
 $('cancel').onclick=async()=>{try{await api('/api/jobs/'+state.job+'/cancel',{method:'POST',body:{}});}catch(e){toast(e.message);}};
 $('evidence-button').onclick=()=>{$('evidence').hidden=!$('evidence').hidden;if(!$('evidence').hidden)$('evidence').scrollIntoView({behavior:'smooth',block:'start'});};
-$('clear-button').onclick=()=>{clearTimeout(state.poll);localStorage.removeItem('cz_last_job');state.files=[];state.roles=[];renderUploads();$('report').hidden=true;$('evidence').hidden=true;$('progress').hidden=true;$('report-tools').hidden=true;$('empty').hidden=false;$('workspace-title').textContent='你的报告，从这里开始';setBusy(false);};
-$('history-button').onclick=async()=>{try{const records=await api('/api/cases');$('history-list').innerHTML=records.length?records.map(c=>`<div class="history-item"><div>${esc(c.name)}<small>${c.photo_count} 张照片 · ${esc(c.source)} · ${esc(c.created_at.slice(0,10))}</small></div><button class="secondary history-open" data-id="${esc(c.id)}">打开</button></div>`).join(''):'<p class="muted">还没有器物记录。</p>';document.querySelectorAll('.history-open').forEach(b=>b.onclick=async()=>{try{const data=await api('/api/cases/'+b.dataset.id);state.case=data.case;$('history-dialog').close();if(data.jobs.length){clearTimeout(state.poll);state.job=data.jobs[0].id;localStorage.setItem('cz_last_job',state.job);await observeJob(data.jobs[0]);}else{toast('该器物尚未生成报告');}}catch(e){toast(e.message);}});$('history-dialog').showModal();}catch(e){toast(e.message);}};
+$('clear-button').onclick=()=>{clearTimeout(state.poll);localStorage.removeItem('cz_last_job');state.files=[];state.roles=[];renderUploads();$('report').hidden=true;$('evidence').hidden=true;$('progress').hidden=true;$('report-tools').hidden=true;$('report-actions').hidden=true;$('empty').hidden=false;$('workspace-title').textContent='你的报告，从这里开始';setBusy(false);};
+$('history-button').onclick=async()=>{try{
+  const records=await api('/api/cases');
+  $('history-list').innerHTML=records.length?records.map(c=>`<div class="history-item"><img src="/api/cases/${c.id}/photos/P1" alt="${esc(c.name)}"><div><strong>${esc(c.name)}</strong><small>${c.photo_count} 张照片 · ${c.report_count} 个报告版本</small><small>${esc(c.source)}</small></div><button class="secondary history-open" data-id="${esc(c.id)}">打开</button></div>`).join(''):'<p class="muted">还没有器物档案。</p>';
+  document.querySelectorAll('.history-open').forEach(b=>b.onclick=async()=>{try{
+    const data=await api('/api/cases/'+b.dataset.id);state.case=data.case;$('history-dialog').close();
+    if(data.jobs.length){clearTimeout(state.poll);state.job=data.jobs[0].id;localStorage.setItem('cz_last_job',state.job);await observeJob(data.jobs[0]);}
+    else{toast('照片已归档，可以用本地模型生成报告');$('empty').hidden=true;$('report').hidden=true;$('report-tools').hidden=true;$('report-actions').hidden=false;$('case-context').textContent=state.case.name;$('rerun').disabled=!state.health?.ready;}
+  }catch(e){toast(e.message);}});
+  $('history-dialog').showModal();
+}catch(e){toast(e.message);}};
 $('close-history').onclick=()=>$('history-dialog').close();
 $('login-form').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{method:'POST',body:{token:$('token').value}});$('token').value='';$('login-dialog').close();await boot();}catch(e){$('login-error').textContent=e.message;}};
+async function refreshModel(initial=false){
+  state.health=await api('/api/model-health');
+  const h=state.health;
+  $('connection').textContent=h.ready?'本地模型在线':'本地模型未就绪';
+  $('model-title').textContent=h.ready?h.model:h.message;
+  $('model-detail').textContent=h.ready?'照片 → 本地多模态观察 → 资料检索 → 理由复核 → 一页报告':'在实体 Spark 安装多模态模型后，就能读取你上传的照片并生成报告。';
+  $('model-note').textContent=h.ready?'原图由本地模型处理，引用和评分会逐项核查。':'新照片分析需要本地模型；可先选择下方“资料核查体验”查看三种结果。';
+  $('setup-button').textContent=h.ready?'部署说明':'安装本地模型';
+  if(initial)$('demo-mode').value=h.ready?'analyze':'catalog';
+  $('rerun').disabled=!h.ready;
+}
+$('refresh-model').onclick=async()=>{try{await refreshModel();toast(state.health.message);}catch(e){toast(e.message);}};
+$('setup-button').onclick=()=>$('setup-dialog').showModal();
+$('close-setup').onclick=()=>$('setup-dialog').close();
+$('rerun').onclick=async()=>{if(!state.health?.ready||!state.case)return;setBusy(true);try{await start('analyze',true);}catch(e){toast(e.message);setBusy(false);}};
 boot();

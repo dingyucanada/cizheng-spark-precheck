@@ -22,7 +22,7 @@ with httpx.Client(base_url=args.base_url, headers=headers, timeout=30, trust_env
     client.headers["x-cz-csrf"] = status["csrf"]
     case = client.post("/api/demos", json={"object_id": 48450}); case.raise_for_status(); case = case.json()
     started = time.monotonic()
-    job = client.post(f"/api/cases/{case['id']}/jobs", json={"mode": "analyze" if args.visual else "catalog"})
+    job = client.post(f"/api/cases/{case['id']}/jobs", json={"mode": "analyze" if args.visual else "catalog", "force_new": True})
     job.raise_for_status(); job = job.json()
     deadline = time.monotonic() + 300
     while time.monotonic() < deadline:

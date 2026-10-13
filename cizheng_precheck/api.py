@@ -11,12 +11,14 @@ from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from .config import Settings
+from .config import Settings, ROOT
 from .store import Store, uid, now
 from .imaging import inspect_photo
 from .knowledge import Knowledge
 from .engine import Engine
 from .schemas import CaseInput, DemoInput, StartInput
+from .examples import EXAMPLES
+from .provider import Provider
 
 WEB = Path(__file__).parent / "web"
 
@@ -36,11 +38,12 @@ def create_app(settings=None, provider_factory=None):
             except BlockingIOError:
                 raise RuntimeError("同一数据目录只能运行一个工作进程") from None
             store.recover()
+            store.reconcile_cases()
             yield
             await engine.close()
             fcntl.flock(lock, fcntl.LOCK_UN)
 
-    app = FastAPI(title="瓷证 · 一页预检", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="瓷证 · 一页预检", version="0.2.0", lifespan=lifespan)
     app.state.store, app.state.engine, app.state.settings = store, engine, s
     hosts = ["localhost", "127.0.0.1", "[::1]", "testserver"] + [h.strip() for h in os.getenv("CZ_ALLOWED_HOSTS", "").split(",") if h.strip()]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
@@ -88,7 +91,7 @@ def create_app(settings=None, provider_factory=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok", "version": "0.2.0", "installation": hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]}
 
     @app.post("/api/login")
     async def login(request: Request):
@@ -104,14 +107,17 @@ def create_app(settings=None, provider_factory=None):
         return {"csrf": csrf, "model_configured": s.model_configured, "model": s.model if s.model_configured else None,
                 "model_verified": False, "online_enabled": s.enable_online, "cloud_text_enabled": s.cloud_text,
                 "catalog_records": len(knowledge.refs), "catalog_photos": len(knowledge.photos),
-                "photo_transport": "local_only", "max_photos": 6, "version": "0.1.0"}
+                "photo_transport": "local_only", "max_photos": 6, "version": "0.2.0"}
 
     @app.get("/api/demos")
     def demos():
-        return [{"object_id": i, "name": n, "description": d, "photo": f"/api/demo-photos/met-{i}-01.jpg"} for i,n,d in [
-            (48450, "龙泉青釉修补碗", "核对照片出处，查看修补记录及送检关注评分"),
-            (48607, "青花山水觚", "检查馆藏归属和图片来源，区分参考资料及实物身份"),
-            (51185, "彩绘瓷器", "从多角度原图建立可追溯的一页资料报告")]]
+        return [dict(object_id=i, name=e['name'], description=e['description'], theme=e['theme'],
+                     premise=e['premise'], claim=e['claim'], photo=f'/api/demo-photos/met-{i}-01.jpg') for i,e in EXAMPLES.items()]
+
+    @app.get('/api/model-health')
+    async def model_health():
+        return await Provider(s).health()
+
 
     @app.get("/api/demo-photos/{filename}")
     def demo_photo(filename: str):
@@ -120,7 +126,7 @@ def create_app(settings=None, provider_factory=None):
             raise HTTPException(404)
         return FileResponse(s.knowledge_dir / "photos" / filename)
 
-    def save_case(meta, uploads, demo=False):
+    def save_case(meta, uploads, demo=False, example=None):
         collected, hashes = [], set()
         for i, data in enumerate(uploads):
             role = meta.roles[i] if i < len(meta.roles) else "unknown"
@@ -132,13 +138,8 @@ def create_app(settings=None, provider_factory=None):
                 raise HTTPException(422, "存在重复照片，请保留不同角度的照片")
             hashes.add(photo["pixel_sha256"])
             collected.append((photo, data, preview))
-        case = {"id": uid("case_"), "created_at": now(), **meta.model_dump(), "photos": [], "demo": demo}
-        folder = store.case_dir(case["id"])
-        for photo, data, preview in collected:
-            (folder / photo["original_file"]).write_bytes(data)
-            (folder / photo["preview_file"]).write_bytes(preview)
-            case["photos"].append(photo)
-        return store.put("case", case)
+        return store.save_case(meta, collected, demo, example)
+
 
     @app.post("/api/cases")
     async def create_case(request: Request):
@@ -159,19 +160,28 @@ def create_app(settings=None, provider_factory=None):
 
     @app.post("/api/demos")
     def create_demo(body: DemoInput):
-        names = {48450: "龙泉青釉修补碗", 48607: "青花山水觚", 51185: "彩绘瓷器"}
+        e = EXAMPLES[body.object_id]
         photos = [p for p in knowledge.photos if p["object_id"] == body.object_id]
-        roles = ["overall", "mouth" if body.object_id == 48450 else "detail", "base"]
-        return save_case(CaseInput(name=names[body.object_id], source="公开馆藏", roles=roles),
-                         [(s.knowledge_dir / "photos" / Path(p["file"]).name).read_bytes() for p in photos], True)
+        return save_case(CaseInput(name=e['name'], claim=e['claim'], source="公开馆藏", roles=e['roles']),
+                         [(s.knowledge_dir / "photos" / Path(p["file"]).name).read_bytes() for p in photos], True,
+                         dict(object_id=body.object_id,scenario=e['scenario'],premise=e['premise']))
+
 
     @app.get("/api/cases")
     def cases():
-        return [{k: c[k] for k in ("id", "name", "created_at", "source", "demo")} | {"photo_count": len(c["photos"])} for c in store.listing("case")]
+        result=[]
+        for c in store.cases():
+            jobs=store.jobs_for_case(c['id'])
+            latest=next((j for j in jobs if j['status']=='complete'),None)
+            result.append({k:c[k] for k in ('id','name','created_at','source','demo')} | {
+                'photo_count':len(c['photos']), 'report_count':sum(j['status']=='complete' for j in jobs),
+                'latest_job': latest['id'] if latest else None})
+        return result
 
     @app.get("/api/cases/{case_id}")
     def case(case_id: str):
-        return {"case": store.get(case_id, "case"), "jobs": [j for j in store.listing("job") if j["case_id"] == case_id]}
+        return {"case": store.canonical(case_id), "jobs": store.jobs_for_case(case_id)}
+
 
     @app.get("/api/cases/{case_id}/photos/{photo_id}")
     def photo(case_id: str, photo_id: str):
@@ -184,7 +194,7 @@ def create_app(settings=None, provider_factory=None):
     @app.post("/api/cases/{case_id}/jobs", status_code=202)
     async def start(case_id: str, body: StartInput):
         try:
-            return engine.start(store.get(case_id, "case"), body.mode)
+            return engine.start(store.canonical(case_id), body.mode, force_new=body.force_new)
         except ValueError as e:
             raise HTTPException(409, str(e)) from None
 

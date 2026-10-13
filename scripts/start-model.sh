@@ -8,14 +8,23 @@ if [[ ! -f "$CZ_MODEL_DIR/config.json" ]]; then
   echo "找不到本地模型。请先运行 scripts/download-model.py。" >&2
   exit 1
 fi
+CZ_DEPLOYMENT_KEY=$(printf '%s' "$(pwd)|$CZ_MODEL_DIR|$CZ_SERVED_MODEL|$CZ_VLLM_IMAGE" | sha256sum | cut -d' ' -f1)
 if docker container inspect cizheng-vision >/dev/null 2>&1; then
-  echo "cizheng-vision 已存在。先检查 docker logs cizheng-vision；本脚本不会覆盖已有容器。" >&2
-  exit 1
+  CZ_EXISTING_KEY=$(docker inspect --format '{{ index .Config.Labels "cizheng.deployment" }}' cizheng-vision)
+  if [[ "$CZ_EXISTING_KEY" != "$CZ_DEPLOYMENT_KEY" ]]; then
+    echo "同名容器属于其他配置或旧版，请先检查；不会覆盖或删除。" >&2
+    exit 1
+  fi
+  docker start cizheng-vision >/dev/null
+  echo "复用本项目已有的视觉模型容器。"
+  exit 0
 fi
-docker pull "$CZ_VLLM_IMAGE"
+if ! docker image inspect "$CZ_VLLM_IMAGE" >/dev/null 2>&1; then
+  docker pull "$CZ_VLLM_IMAGE"
+fi
 mkdir -p verification/private
 docker image inspect "$CZ_VLLM_IMAGE" --format '{{json .RepoDigests}}' > verification/private/vllm-image-digest.json
-docker run -d --name cizheng-vision --restart unless-stopped --gpus all --shm-size 8g \
+docker run -d --label "cizheng.deployment=$CZ_DEPLOYMENT_KEY" --name cizheng-vision --restart unless-stopped --gpus all --shm-size 8g \
   -p 127.0.0.1:8000:8000 \
   -v "$CZ_MODEL_DIR:/models/qwen:ro" \
   -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 -e OMP_NUM_THREADS=1 \

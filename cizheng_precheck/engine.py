@@ -6,7 +6,7 @@ import time
 from .store import uid, now
 from .provider import Provider, ModelFailure
 from .knowledge import validate_comparisons
-from .policy import catalog_report, decide
+from .policy import catalog_report, decide, VERSION
 from .pdf_report import render
 
 
@@ -22,12 +22,19 @@ class Engine:
         job["events"].append({"at": now(), "stage": stage, "percent": percent, "message": message})
         self.store.put("job", job)
 
-    def start(self, case, mode):
+    def start(self, case, mode, force_new=False):
+        signature=hashlib.sha256(json.dumps({'case':case, 'mode':mode, 'model':self.s.model,
+            'endpoint':self.s.model_url, 'rule':VERSION, 'pipeline':'0.2.0',
+            'sources':sorted(r.get('record_sha256','') for r in self.knowledge.refs)},sort_keys=True).encode()).hexdigest()
+        if not force_new:
+            existing=next((j for j in self.store.jobs_for_case(case['id']) if j.get('signature')==signature
+                and j['status'] in ('queued','running','complete')),None)
+            if existing: return existing
         if sum(not t.done() for t in self.tasks.values()) >= 4:
             raise ValueError("当前队列已满，请等待正在处理的器物完成")
         if mode == "analyze" and not self.s.model_configured:
             raise ValueError("尚未连接视觉模型。可先体验公开馆藏资料核查；新照片研判需连接 Spark 模型。")
-        job = {"id": uid("job_"), "case_id": case["id"], "mode": mode, "created_at": now(), "status": "queued", "stage": "等待处理", "percent": 0, "message": "照片已保存", "events": []}
+        job = {"id": uid("job_"), "case_id": case["id"], "mode": mode, "signature": signature, "created_at": now(), "status": "queued", "stage": "等待处理", "percent": 0, "message": "照片已保存", "events": []}
         self.store.put("job", job)
         task = asyncio.create_task(self.run(job, case))
         self.tasks[job["id"]] = task
@@ -83,7 +90,7 @@ class Engine:
                 different = next((r for r in refs[1:] if r['source_group'] != refs[0]['source_group']), None)
                 if different:
                     refs = [refs[0],different] + [r for r in refs[1:] if r['id'] != different['id']]
-            target_forms = set(analysis['search_terms']) & {'bowl','vase','jar','dish'}
+            target_forms = set(analysis['search_terms']) & {'bowl','vase','jar','dish','beaker','teapot'}
             refs = [dict(r, applicability='comparable_candidate' if (not target_forms or any(t in r['title'].lower() for t in target_forms)) else 'context_only') for r in refs]
             self.progress(job, "证据比较", 65, "比较照片观察和资料；保存支持点、疑点及替代解释")
             comparisons, rejected = [], []

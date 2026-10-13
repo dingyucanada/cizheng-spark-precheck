@@ -50,13 +50,16 @@ def test_catalog_full_journey_and_export(client):
             assert hashlib.sha256(z.read('originals/'+p['original_file'])).hexdigest()==p['sha256']
 
 
-@pytest.mark.parametrize('identifier',[48607,51185])
-def test_catalog_no_invented_score(client,identifier):
+@pytest.mark.parametrize('identifier,grade,opinion',[(48607,2,'常规核验'),(51185,4,'年代说法冲突')])
+def test_catalog_grade_follows_explicit_evidence(client,identifier,grade,opinion):
     case=client.post('/api/demos',json={'object_id':identifier}).json()
     job=client.post('/api/cases/'+case['id']+'/jobs',json={'mode':'catalog'}).json()
     assert wait(client,job['id'])['status']=='complete'
     r=client.get('/api/jobs/'+job['id']+'/report').json()
-    assert r['score']['value'] is None
+    assert r['score']['value']==grade and opinion in r['opinion']
+    assert r['authenticity_probability'] is None and not r['model_executed']
+    if identifier==51185:
+        assert '体验设定' in r['claim'] and '19th century' in r['reasons'][1]['body']
 
 
 def test_no_model_refuses_new_visual_analysis(client):
