@@ -1,0 +1,46 @@
+{
+  "status": {
+    "status": "ok",
+    "count": 3,
+    "providers": [
+      {
+        "status": "unavailable",
+        "provider": "The Met",
+        "query": "Longquan celadon bowl",
+        "http_status": 403,
+        "reason": "在线来源暂不可用，继续使用其他来源及本地资料"
+      },
+      {
+        "status": "ok",
+        "provider": "Art Institute of Chicago",
+        "query": "Longquan",
+        "count": 3
+      }
+    ],
+    "outbound": "仅受控器物词，不含照片及用户说明"
+  },
+  "references": [
+    {
+      "id": "AIC-21653",
+      "title": "Foliate Cup and Stand",
+      "url": "https://www.artic.edu/artworks/21653",
+      "medium": "Longquan ware; stoneware with underglaze molded decoration"
+    },
+    {
+      "id": "AIC-12476",
+      "title": "Foliate Dish with Crane and Deer Amid Clouds",
+      "url": "https://www.artic.edu/artworks/12476",
+      "medium": "Longquan ware; celadon-glazed stoneware with underglaze mold-impressed decoration"
+    },
+    {
+      "id": "AIC-12483",
+      "title": "Foliate Dish with Bovine (Xiniu) Gazing at a Crescent Moon",
+      "url": "https://www.artic.edu/artworks/12483",
+      "medium": "Longquan ware; stoneware with underglaze molded decoration"
+    }
+  ],
+  "reference_images": {
+    "new_aic_images": "HTTP 403 in this environment; no image copied",
+    "local_met_reference_photos": 9
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "upload": true,
+  "photo_roles": true,
+  "real_unavailable_local_endpoint": true,
+  "failed_without_report": true,
+  "refresh_recovery": true,
+  "retry": true,
+  "case_preserved": true,
+  "console_errors": []
+}

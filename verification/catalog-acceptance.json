@@ -1,0 +1,48 @@
+{
+  "mode": "catalog_audit",
+  "passed": true,
+  "seconds": 1.06,
+  "pdf_pages": 1,
+  "job": {
+    "id": "job_1e84709ae55f475f",
+    "case_id": "case_e93baa17b65f429e",
+    "mode": "catalog",
+    "created_at": "2026-10-13T18:24:02.738309+00:00",
+    "status": "complete",
+    "stage": "报告已生成",
+    "percent": 100,
+    "message": "可下载一页 PDF，或展开每条意见的证据",
+    "events": [
+      {
+        "at": "2026-10-13T18:24:02.738788+00:00",
+        "stage": "照片检查",
+        "percent": 12,
+        "message": "校验原图指纹、重复图片及基本画质"
+      },
+      {
+        "at": "2026-10-13T18:24:02.739545+00:00",
+        "stage": "资料核验",
+        "percent": 62,
+        "message": "逐张比对已收录馆藏图像，核验馆方原始记录"
+      },
+      {
+        "at": "2026-10-13T18:24:02.740014+00:00",
+        "stage": "排版一页报告",
+        "percent": 93,
+        "message": "生成 PDF 并封存原图指纹和本次证据档案"
+      },
+      {
+        "at": "2026-10-13T18:24:02.846800+00:00",
+        "stage": "报告已生成",
+        "percent": 100,
+        "message": "可下载一页 PDF，或展开每条意见的证据"
+      }
+    ],
+    "report_id": "job_1e84709ae55f475f_report",
+    "finished_at": "2026-10-13T18:24:02.846978+00:00",
+    "seconds": 0.108,
+    "model_calls": []
+  },
+  "model_executed": false,
+  "expert_accuracy_verified": false
+}

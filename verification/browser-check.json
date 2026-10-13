@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "console_errors": [],
+  "desktop": "1440x1200",
+  "mobile": "390x844",
+  "pdf_download": true,
+  "evidence_panel": true,
+  "refresh_recovery": true,
+  "history": true,
+  "mobile_horizontal_overflow": false,
+  "visual_model_executed": false
+}

@@ -1,0 +1,80 @@
+{
+  "objectID": 48607,
+  "isHighlight": false,
+  "accessionNumber": "18.61.4",
+  "accessionYear": "1918",
+  "isPublicDomain": true,
+  "primaryImage": "https://images.metmuseum.org/CRDImages/as/original/18_61_4_O1_sf.jpg",
+  "primaryImageSmall": "https://images.metmuseum.org/CRDImages/as/web-large/18_61_4_O1_sf.jpg",
+  "additionalImages": [
+    "https://images.metmuseum.org/CRDImages/as/original/18_61_4_O2_sf.jpg",
+    "https://images.metmuseum.org/CRDImages/as/original/18_61_4_O3_sf.jpg",
+    "https://images.metmuseum.org/CRDImages/as/original/18_61_4_O4_sf.jpg",
+    "https://images.metmuseum.org/CRDImages/as/original/18_61_4_Bm_sf.jpg"
+  ],
+  "constituents": null,
+  "department": "Asian Art",
+  "objectName": "Beaker",
+  "title": "Beaker with landscape",
+  "culture": "China",
+  "period": "Qing dynasty (1644–1911), early Kangxi period (1662–1722)",
+  "dynasty": "",
+  "reign": "",
+  "portfolio": "",
+  "artistRole": "",
+  "artistPrefix": "",
+  "artistDisplayName": "",
+  "artistDisplayBio": "",
+  "artistSuffix": "",
+  "artistAlphaSort": "",
+  "artistNationality": "",
+  "artistBeginDate": "",
+  "artistEndDate": "",
+  "artistGender": "",
+  "artistWikidata_URL": "",
+  "artistULAN_URL": "",
+  "objectDate": "",
+  "objectBeginDate": 1662,
+  "objectEndDate": 1722,
+  "medium": "Porcelain painted in underglaze cobalt blue (Jingdezhen ware)",
+  "dimensions": "H. 19 in. (48.3 cm); Diam. 9 1/8 in. (23.2 cm)",
+  "measurements": [
+    {
+      "elementName": "Overall",
+      "elementDescription": "CSR Survey",
+      "elementMeasurements": {
+        "Diameter": 23.177546,
+        "Height": 48.3,
+        "Weight": 5.669963
+      }
+    }
+  ],
+  "creditLine": "Rogers Fund, 1918",
+  "geographyType": "",
+  "city": "",
+  "state": "",
+  "county": "",
+  "country": "",
+  "region": "",
+  "subregion": "",
+  "locale": "",
+  "locus": "",
+  "excavation": "",
+  "river": "",
+  "classification": "Ceramics",
+  "rightsAndReproduction": "",
+  "linkResource": "",
+  "metadataDate": "2026-08-27T04:59:41.6Z",
+  "repository": "Metropolitan Museum of Art, New York, NY",
+  "objectURL": "https://www.metmuseum.org/art/collection/search/48607",
+  "tags": [
+    {
+      "term": "Trees",
+      "AAT_URL": "http://vocab.getty.edu/page/aat/300132410",
+      "Wikidata_URL": "https://www.wikidata.org/wiki/Q10884"
+    }
+  ],
+  "objectWikidata_URL": "",
+  "isTimelineWork": false,
+  "GalleryNumber": ""
+}

@@ -1,0 +1,11 @@
+{
+  "title": "填写馆方资料题名",
+  "provider": "填写来源机构",
+  "url": "https://www.dpm.org.cn/实际资料路径",
+  "excerpt": "逐字粘贴可核验的相关原文，不要粘贴模型总结。",
+  "location": "页面标题、段落或出版物页码",
+  "rights": "填写实际授权或引用范围",
+  "reviewer": "实际核验人员",
+  "reviewed_at": "实际核验日期",
+  "public_record": false
+}
