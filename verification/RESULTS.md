@@ -1,11 +1,12 @@
 # 本次交付验证记录
 
-验证日期：2026-10-14。应用版本：0.1.0。当前开发环境为 macOS / Python 3.12；新实体 DGX Spark 尚未连接。本文件记录实际执行范围，目标设备记录由部署后追加。
+验证日期：2026-10-14。应用版本：0.1.0。开发环境为 macOS / Python 3.12，GitHub Ubuntu / Python 3.12 自动检查亦通过；新实体 DGX Spark 尚未连接。本文件记录实际执行范围，目标设备记录由部署后追加。
 
 ## 已执行
 
 | 检查 | 实际结果 | 可核查文件 |
 |---|---|---|
+| GitHub Linux 自动检查 | Ubuntu 上重新安装依赖、中文字体并通过测试和脚本检查 | [运行记录](https://github.com/dingyucanada/cizheng-spark-precheck/actions/runs/38447677134)、`github-linux-ci.json` |
 | 后台及规则回归 | 35 项通过；覆盖原图留存、来源匹配、引用、权限、拒绝评分、取消、超时和篡改拦截 | `pytest.txt`、`tests/` |
 | 桌面浏览器操作 | 实际点击馆藏入口，生成报告，下载PDF，展开证据，刷新恢复，打开历史 | `browser-check.json`、`docs/workbench.png`、`docs/report-workbench.png` |
 | 手机布局 | 390×844 视口，无横向溢出 | `mobile.png` |
