@@ -19,8 +19,7 @@ bash scripts/install-spark.sh --with-system-packages
 ## 1. 取得代码
 
 ```bash
-gh auth login
-gh repo clone dingyucanada/cizheng-spark-precheck
+git clone https://github.com/dingyucanada/cizheng-spark-precheck.git
 cd cizheng-spark-precheck
 uname -m
 nvidia-smi

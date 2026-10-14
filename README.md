@@ -34,7 +34,7 @@ bash scripts/install-spark.sh --with-system-packages
 
 安装程序包含 **权重下载、GPU 推理容器、真实图片探测、后台和网页、完整视觉报告验收**。完成后打开 <http://127.0.0.1:8790>。日后运行 `bash scripts/run-spark.sh` 即可启动。详细步骤见 **[从这里开始](START_HERE.md)**。
 
-这份安装包可以交给其他 Spark 使用者在其设备上安装，不依赖作者的电脑、原比赛云节点或作者的 API 密钥。当前仓库为私有，有权访问者可以克隆，其他获授权使用者可通过安装包部署。
+这份安装包可以交给其他 Spark 使用者在其设备上安装，不依赖作者的电脑、原比赛云节点或作者的 API 密钥。仓库和发行包现已公开，可直接浏览、克隆或下载。使用及再分发范围见 [LICENSE](LICENSE)。
 
 想让 Codex 完成安装，见 [Codex 部署交接](DEPLOY_WITH_CODEX.md)。技术说明：[完整部署](docs/SPARK_DEPLOY.md) · [系统架构](docs/ARCHITECTURE.md) · [评分规则](docs/SCORING.md)。
 
