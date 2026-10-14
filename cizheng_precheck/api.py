@@ -19,6 +19,7 @@ from .engine import Engine
 from .schemas import CaseInput, DemoInput, StartInput
 from .examples import EXAMPLES
 from .provider import Provider
+from . import __version__
 
 WEB = Path(__file__).parent / "web"
 
@@ -29,6 +30,7 @@ def create_app(settings=None, provider_factory=None):
     knowledge = Knowledge(s.knowledge_dir, s.data_dir / "source_cache")
     engine = Engine(store, knowledge, s, **({"provider_factory": provider_factory} if provider_factory else {}))
     csrf = secrets.token_urlsafe(24)
+    boot_time = now()
 
     @asynccontextmanager
     async def lifespan(app):
@@ -43,7 +45,7 @@ def create_app(settings=None, provider_factory=None):
             await engine.close()
             fcntl.flock(lock, fcntl.LOCK_UN)
 
-    app = FastAPI(title="瓷证 · 一页预检", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="瓷证 · 一页预检", version=__version__, lifespan=lifespan)
     app.state.store, app.state.engine, app.state.settings = store, engine, s
     hosts = ["localhost", "127.0.0.1", "[::1]", "testserver"] + [h.strip() for h in os.getenv("CZ_ALLOWED_HOSTS", "").split(",") if h.strip()]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
@@ -51,6 +53,8 @@ def create_app(settings=None, provider_factory=None):
     @app.middleware("http")
     async def boundary(request: Request, call_next):
         path = request.url.path
+        if (path == '/operator' or path.startswith('/api/operator/')) and request.client and request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+            return JSONResponse({'detail': '准备台仅供本机或 SSH 隧道访问'}, status_code=403)
         if not s.access_token and request.client and request.client.host not in ("127.0.0.1", "::1", "testclient"):
             return JSONResponse({"detail": "远程访问需要配置 CZ_ACCESS_TOKEN"}, status_code=403)
         protected = path.startswith("/api/") and path not in ("/api/login", "/api/health")
@@ -83,15 +87,19 @@ def create_app(settings=None, provider_factory=None):
     def home():
         return FileResponse(WEB / "index.html")
 
+    @app.get('/operator')
+    def operator():
+        return FileResponse(WEB / 'operator.html')
+
     @app.get("/assets/{filename}")
     def assets(filename: str):
-        if filename not in ("app.js", "style.css"):
+        if filename not in ("app.js", "style.css", "operator.js"):
             raise HTTPException(404)
         return FileResponse(WEB / filename)
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.2.0", "installation": hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]}
+        return {"status": "ok", "version": __version__, "installation": hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]}
 
     @app.post("/api/login")
     async def login(request: Request):
@@ -107,7 +115,7 @@ def create_app(settings=None, provider_factory=None):
         return {"csrf": csrf, "model_configured": s.model_configured, "model": s.model if s.model_configured else None,
                 "model_verified": False, "online_enabled": s.enable_online, "cloud_text_enabled": s.cloud_text,
                 "catalog_records": len(knowledge.refs), "catalog_photos": len(knowledge.photos),
-                "photo_transport": "local_only", "max_photos": 6, "version": "0.2.0"}
+                "photo_transport": "local_only", "max_photos": 6, "version": __version__}
 
     @app.get("/api/demos")
     def demos():
@@ -117,6 +125,26 @@ def create_app(settings=None, provider_factory=None):
     @app.get('/api/model-health')
     async def model_health():
         return await Provider(s).health()
+
+    @app.get('/api/operator/readiness')
+    async def readiness():
+        from .stage import readiness_snapshot
+        health = await Provider(s).health()
+        return readiness_snapshot(store, knowledge, s, health, boot_time)
+
+    @app.get('/api/operator/photos.zip')
+    def rehearsal_photos():
+        # Real licensed museum photographs; no opinion or score is imported by the user UI.
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+            for p in knowledge.photos:
+                path = s.knowledge_dir / p['file']
+                if hashlib.sha256(path.read_bytes()).hexdigest() != p['sha256']:
+                    raise HTTPException(409, '排练照片完整性检查失败')
+                z.write(path, f"photos/{p['object_id']}/{path.name}")
+            z.writestr('照片来源.json', json.dumps(knowledge.photos, ensure_ascii=False, indent=2))
+            z.writestr('使用说明.txt', '本包为 The Met 公开馆藏实物照片，Public Domain / CC0。\n每个文件夹是一件器物；在用户界面选择同一文件夹的2–3张照片，照片来源选择“公开馆藏”。\n不能把这些照片称为现场新拍，也不能把资料体验当成真实模型推理。不要混选不同器物。\n正式演示优先使用已有授权的实物照片。\n')
+        return Response(buf.getvalue(), media_type='application/zip', headers={'Content-Disposition': 'attachment; filename="cizheng-rehearsal-photos.zip"'})
 
 
     @app.get("/api/demo-photos/{filename}")

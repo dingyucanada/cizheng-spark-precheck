@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "user_journey": "upload → confirmation → actual analyze API → report",
+  "homepage_has_no_presets_or_installation": true,
+  "unavailable_device_keeps_uploaded_photos": true,
+  "saved_report_explicitly_labelled": true,
+  "operator_never_counts_catalog_as_visual": true,
+  "reload_resume": true,
+  "new_analysis_creates_report_version": true,
+  "archive_open_does_not_analyze": true,
+  "one_object_two_report_versions": true,
+  "mobile_overflow": false,
+  "console_errors": [],
+  "model_execution": "explicit test fixture for full UI; real target GPU not connected"
+}

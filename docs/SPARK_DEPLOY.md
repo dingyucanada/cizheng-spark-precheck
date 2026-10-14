@@ -38,7 +38,7 @@ bash scripts/bootstrap-spark.sh --with-system-packages
 
 脚本建立 `.venv`，安装锁定应用依赖和中文字体；已有 `.env` 不会覆盖。若系统组件已经具备，省略 `--with-system-packages`。没有 sudo 时先让管理员安装 `python3-venv fonts-wqy-zenhei poppler-utils`。
 
-先只启动应用体验公开资料核查：
+先启动应用，检查用户界面：
 
 ```bash
 bash scripts/start.sh
@@ -50,7 +50,7 @@ bash scripts/start.sh
 .venv/bin/python scripts/acceptance.py
 ```
 
-打开 `http://127.0.0.1:8790`。即使 `.env` 已有模型名称，配置存在也不代表模型已经可用；公开馆藏核查可以独立运行。
+打开 `http://127.0.0.1:8790`。配置存在不代表模型可用。资料核查验收可以独立运行，但用户首页不提供这类预设入口，设备准备台也不会将其计为视觉排练。
 
 ## 3. 下载视觉模型
 
@@ -138,3 +138,7 @@ ssh -L 8790:127.0.0.1:8790 你的Spark主机别名
 更新应用前备份 runtime，并停止本项目正在运行的应用进程。保留 .env、models、runtime 后更新代码及应用依赖，再启动工作台。启动时按照片解码像素集合将旧重复档案归并显示，不删除原图和旧报告。模型配置变化不会重用旧的分析结果；明确重新分析会保存新报告版本。
 
 当前未连接新实体 Spark，因此本仓库记录的工程测试不等于该机器已完成GPU部署。最终以安装程序在目标机器产生的真实图像验收记录为准。
+
+## 现场演示前准备
+
+模型安装成功后执行 `bash scripts/prepare-stage.sh`。准备台为 `/operator`，观众界面为 `/?new=1`。详见 [现场演示手册](STAGE_RUNBOOK.md)。

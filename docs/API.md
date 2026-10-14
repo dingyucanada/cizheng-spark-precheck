@@ -35,3 +35,12 @@ metadata示意：
 - `POST /api/cases/{id}/jobs` 默认复用相同输入、模式、模型和资料版本的进行中/已完成任务；传 `force_new: true` 明确创建新报告。失败任务可重新开始。
 - `GET /api/cases` 返回器物清单及 report_count，不把每次访问当成一个器物。`GET /api/cases/{id}` 包含其所有报告任务。
 - 原始重复记录作为别名保留，旧的照片及报告链接继续有效。
+
+## 0.3.0 用户流程及准备台
+
+- `GET /`：四步用户流程，不调用预设案例列表。
+- `GET /operator`：本机维护页，不在用户导航公开。
+- `GET /api/operator/readiness`：真实模型服务、字体、照片指纹、资料、当前会话视觉排练和队列状态。历史资料核查不满足视觉排练。
+- `GET /api/operator/photos.zip`：公开馆藏原图及来源记录，供操作员事前准备。
+
+准备台及其接口限定回环访问；配置访问口令后API仍需认证。用户新预检提交 `mode=analyze, force_new=true`；查看档案只读已有任务和报告，不触发重新计算。

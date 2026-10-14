@@ -29,3 +29,7 @@ This repository is Cizheng (瓷证), a local ceramic photo precheck application.
 
 - Preserve one object per exact photo set. Opening examples reuses objects and compatible reports; only explicit reruns create new report versions. Never delete legacy original files while merging duplicate listings.
 - Catalog scenarios have evidence-based 2/3/4 priorities. The Ming claim in the teapot scenario is an explicitly labeled exercise input. Do not call the museum artifact a forgery, or prescribe fixed scores for actual model runs.
+
+- Collector-facing `/` must remain a four-step real-photo workflow: no setup UI, preset-result cards or catalog mode switch. Maintenance belongs at loopback-only `/operator`.
+- An explicit new precheck must request fresh inference; archive opening must not. Saved reports remain visibly labeled. Never simulate progress or silently fall back to stored material.
+- Read docs/STAGE_RUNBOOK.md before preparing a live demonstration. Service health alone must not satisfy full rehearsal readiness.

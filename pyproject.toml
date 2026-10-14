@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cizheng-spark-precheck"
-version = "0.2.0"
+version = "0.3.0"
 description = "瓷证：由照片、可核验资料生成一页辅助预检报告"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "httpx>=0.27,<1", "python-multipart>=0.0.20,<1", "pydantic>=2.10,<3", "Pillow>=11,<13", "numpy>=2,<3", "reportlab>=4.4,<5"]
