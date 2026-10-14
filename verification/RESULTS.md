@@ -6,6 +6,7 @@
 
 | 检查 | 实际结果 | 可核查文件 |
 |---|---|---|
+| GitHub Linux 独立验证 | Ubuntu / Python 3.12 重新安装依赖及中文字体，47项测试及Shell检查通过；验证代码提交3822f39 | [运行记录](https://github.com/dingyucanada/cizheng-spark-precheck/actions/runs/38487343539)、`github-linux-v020.json` |
 | 后台及规则回归 | 47 项通过，涵盖原图留存、引用、评分、取消、超时、并发去重、旧数据迁移和模型路由 | `pytest-v020.txt`、`tests/` |
 | 三种资料核查场景 | 3分修补复核、2分常规核验、4分年代说法冲突；第三项明代说法明确标为体验设定 | `browser-v020.json`、`v020-48450.pdf`、`v020-48607.pdf`、`v020-51185.pdf` |
 | 真实浏览器重复点击 | 同一案例复用器物 ID 和报告 ID；我的器物只列一条，刷新后恢复报告 | `browser-v020.json` |
